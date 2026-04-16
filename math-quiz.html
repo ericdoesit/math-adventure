@@ -315,6 +315,44 @@ body {
   padding: 10px;
 }
 
+/* Stats box on welcome screen */
+#stats-box {
+  width: 100%;
+  background: #fee28f;
+  border: 2px solid #ffc90c;
+  border-radius: 16px;
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#stats-box.hidden { display: none; }
+#stats-headline {
+  display: flex;
+  justify-content: space-around;
+  font-size: clamp(0.9rem, 2.8vw, 1.05rem);
+  font-weight: 700;
+  color: #131313;
+}
+#stats-headline span { text-align: center; }
+#stats-headline small { display: block; font-weight: 400; font-size: 0.8em; color: #555; }
+#stats-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+.topic-chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  color: #131313;
+}
+.chip-mastered  { background: #67a4a9; color: white; }
+.chip-progress  { background: #ffc90c; }
+.chip-weak      { background: rgba(240,70,35,0.2); }
+
 /* === ANIMATIONS === */
 @keyframes bounce {
   0%,100%{transform:scale(1)} 40%{transform:scale(1.2)} 70%{transform:scale(0.92)}
@@ -357,6 +395,7 @@ body {
       <span>Beginner</span><span>Intermediate</span><span>Advanced</span>
     </div>
   </div>
+  <div id="stats-box" class="hidden"></div>
   <button class="btn-primary" id="btn-start">Let's Go! 🚀</button>
   <div class="animal-wrap"><img id="animal-welcome" src="" alt=""></div>
 </div>
@@ -837,6 +876,8 @@ function setRandomAnimal() {
 function initSlider() {
   const slider = document.getElementById('diff-slider');
   const badge  = document.getElementById('diff-badge');
+  const saved  = loadData().lastDifficulty;
+  if (saved) slider.value = saved;
   function update() {
     const v = +slider.value;
     badge.textContent = DIFF_LABELS[v];
@@ -845,6 +886,76 @@ function initSlider() {
   }
   slider.addEventListener('input', update);
   update();
+}
+
+// ─── LOCAL STORAGE ───────────────────────────────────────────────────────────
+const STORE_KEY = 'mathAdventure_v1';
+
+const TOPIC_LABELS = {
+  'addition':'Addition','subtraction':'Subtraction','dots':'Counting Dots',
+  'emoji-count':'Counting','comparison':'Comparing','sequence':'Sequences',
+  'shape':'Shapes','skip-count':'Skip Count','place-value':'Place Value',
+  'word-problem':'Word Problems','clock':'Telling Time','fraction':'Fractions',
+  'measurement':'Measurement','bargraph':'Bar Graphs','pattern':'Patterns',
+  'money':'Money',
+};
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+  catch(e) { return {}; }
+}
+
+function saveData(d) {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); } catch(e) {}
+}
+
+function getDefaults() {
+  return { bestScore: 0, totalQuizzes: 0, lastDifficulty: 1, topicStats: {} };
+}
+
+function recordAnswer(topicKey, isCorrect) {
+  const d = loadData();
+  if (!d.topicStats) d.topicStats = {};
+  if (!d.topicStats[topicKey]) d.topicStats[topicKey] = { correct: 0, total: 0 };
+  d.topicStats[topicKey].total++;
+  if (isCorrect) d.topicStats[topicKey].correct++;
+  saveData(d);
+}
+
+function recordGameEnd(score, difficulty) {
+  const d = { ...getDefaults(), ...loadData() };
+  d.bestScore = Math.max(d.bestScore, score);
+  d.totalQuizzes++;
+  d.lastDifficulty = difficulty;
+  saveData(d);
+}
+
+function renderWelcomeStats() {
+  const box = document.getElementById('stats-box');
+  const d = { ...getDefaults(), ...loadData() };
+  if (d.totalQuizzes === 0) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+
+  // Headline numbers
+  box.innerHTML = `
+    <div id="stats-headline">
+      <span>${d.bestScore} / 20<small>Best Score</small></span>
+      <span>${d.totalQuizzes}<small>Games Played</small></span>
+    </div>
+    <div id="stats-topics"></div>`;
+
+  // Topic chips
+  const topicsEl = box.querySelector('#stats-topics');
+  Object.entries(d.topicStats || {}).forEach(([key, s]) => {
+    if (s.total === 0) return;
+    const pct = s.correct / s.total;
+    const cls = pct >= 0.8 ? 'chip-mastered' : pct >= 0.5 ? 'chip-progress' : 'chip-weak';
+    const chip = document.createElement('span');
+    chip.className = `topic-chip ${cls}`;
+    chip.textContent = `${TOPIC_LABELS[key] || key} ${Math.round(pct*100)}%`;
+    chip.title = `${s.correct} / ${s.total} correct`;
+    topicsEl.appendChild(chip);
+  });
 }
 
 // ─── GAME STATE ───────────────────────────────────────────────────────────────
@@ -932,6 +1043,7 @@ function onAnswer(idx) {
   }
 
   GS.lastTopic = q.topicKey;
+  recordAnswer(q.topicKey, ok);
   if (ok) { GS.forceRepeat=false; GS.difficulty=Math.min(9,GS.difficulty+1); }
   else     { GS.forceRepeat=true;  GS.difficulty=Math.max(1,GS.difficulty-1); }
 
@@ -976,6 +1088,7 @@ function endGame() {
   else if (GS.score>=6)  msg="Nice effort! Every practice makes you better!";
   else                   msg="Great try! Math is a superpower and you're learning it! 💪";
   document.getElementById('end-msg').textContent = msg;
+  recordGameEnd(GS.score, GS.difficulty);
   spawnConfetti();
 }
 
@@ -998,11 +1111,13 @@ function spawnConfetti() {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  if (id === 'screen-welcome') renderWelcomeStats();
 }
 
 // ─── EVENTS ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initSlider();
+  renderWelcomeStats();
   setRandomAnimal();
   document.getElementById('btn-start').addEventListener('click', startGame);
   document.getElementById('btn-again').addEventListener('click', startGame);
