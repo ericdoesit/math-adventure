@@ -914,7 +914,7 @@ function pickQuestion() {
 }
 
 // ─── IMAGES & DIFFICULTY INIT ─────────────────────────────────────────────────
-const ANIMAL_IMAGES = ['arctic-wolf','bat','bearsitting','beaver','birdeater','black-bear','cappy','caribou','cheetah','eagle','hare','horned-owl','lynx','moose','nubs','ostrich','platypus','polarbear','rhino','tax','turkey','wild-dog'];
+let ANIMAL_IMAGES = [];
 
 const DIFF_LABELS = {
   1:'1 — Just Starting!', 2:'2 — Warming Up!', 3:'3 — Getting There!',
@@ -923,6 +923,7 @@ const DIFF_LABELS = {
 };
 
 function setRandomAnimal() {
+  if (!ANIMAL_IMAGES.length) return;
   const img = pick(ANIMAL_IMAGES);
   const url = `images/${img}.png`;
   document.getElementById('animal-welcome').src = url;
@@ -1176,7 +1177,11 @@ function showScreen(id) {
 }
 
 // ─── EVENTS ───────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const res = await fetch('images/manifest.json');
+    ANIMAL_IMAGES = await res.json();
+  } catch(e) {}
   initSlider();
   renderWelcomeStats();
   setRandomAnimal();
