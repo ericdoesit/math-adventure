@@ -352,6 +352,18 @@ body {
   gap: 10px;
 }
 #stats-box.hidden { display: none; }
+#btn-reset {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 4px 8px;
+  text-decoration: underline;
+}
+#btn-reset:hover { color: #f04623; }
+#btn-reset.hidden { display: none; }
 #stats-headline {
   display: flex;
   justify-content: space-around;
@@ -422,6 +434,7 @@ body {
   </div>
   <div id="stats-box" class="hidden"></div>
   <button class="btn-primary" id="btn-start">Let's Go! 🚀</button>
+  <button id="btn-reset" class="hidden">Reset Progress</button>
   <div class="animal-wrap"><img id="animal-welcome" src="" alt=""></div>
 </div>
 
@@ -989,8 +1002,10 @@ function recordGameEnd(score, difficulty) {
 
 function renderWelcomeStats() {
   const box = document.getElementById('stats-box');
+  const resetBtn = document.getElementById('btn-reset');
   const d = { ...getDefaults(), ...loadData() };
-  if (d.totalQuizzes === 0) { box.classList.add('hidden'); return; }
+  if (d.totalQuizzes === 0) { box.classList.add('hidden'); resetBtn.classList.add('hidden'); return; }
+  resetBtn.classList.remove('hidden');
   box.classList.remove('hidden');
 
   // Headline numbers
@@ -1187,6 +1202,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   setRandomAnimal();
   document.getElementById('btn-start').addEventListener('click', startGame);
   document.getElementById('btn-again').addEventListener('click', startGame);
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    if (confirm('Reset all your progress and scores?')) {
+      localStorage.removeItem(STORE_KEY);
+      renderWelcomeStats();
+    }
+  });
   document.querySelectorAll('.choice-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!btn.disabled) onAnswer(+btn.dataset.idx);
