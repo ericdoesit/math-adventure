@@ -26,11 +26,30 @@ body {
   flex-direction: column;
   align-items: center;
   width: 50vw;
-  min-width: 600px;
   border-radius: 20px;
   gap: 12px;
 }
 .screen.active { display: flex; }
+
+/* Tablet */
+@media (max-width: 1100px) {
+  .screen { width: 75vw; }
+}
+
+/* Mobile */
+@media (max-width: 700px) {
+  .screen { width: 95vw; border-radius: 12px; }
+  body { padding: 12px 8px; align-items: flex-start; }
+  #welcome-title { font-size: clamp(1.6rem, 8vw, 2.4rem); }
+  #question-text { font-size: clamp(1.2rem, 5.5vw, 1.8rem); }
+  .choice-btn { font-size: clamp(1rem, 5vw, 1.4rem); padding: 12px 8px; min-height: 54px; }
+  #star-level { font-size: 0.7rem; flex-wrap: wrap; }
+  .animal-behind { left: 60%; width: 60%; }
+  .animal-wrap { width: 85%; }
+  #choices-grid { gap: 8px; }
+  .welcome-rules, #diff-selector, #stats-box { font-size: 0.9rem; padding: 12px 16px; }
+  #diff-slider { height: 8px; }
+}
 
 /* Animal image div — welcome: below content */
 .animal-wrap {
@@ -189,7 +208,7 @@ body {
   transition: width 0.4s ease;
 }
 #header-bottom { display: flex; justify-content: space-between; align-items: center; }
-#star-level { font-size: clamp(0.75rem, 2.5vw, 0.95rem); letter-spacing: 0px; line-height: 1.4; }
+#star-level { font-size: clamp(0.7rem, 2vw, 0.95rem); letter-spacing: 0px; line-height: 1.4; display: flex; flex-wrap: wrap; gap: 1px; }
 .star-on  { color: #ffc90c; }
 .star-off { color: #fee28f; }
 .star-gap { display: inline-block; width: 3px; }
