@@ -759,6 +759,10 @@ function renderVisual(visual) {
         square:    `<svg viewBox="0 0 100 100" width="190" height="190"><rect x="8" y="8" width="84" height="84" fill="#e53935" stroke="#b71c1c" stroke-width="3"/></svg>`,
         triangle:  `<svg viewBox="0 0 100 100" width="190" height="190"><polygon points="50,8 92,92 8,92" fill="#388e3c" stroke="#1b5e20" stroke-width="3"/></svg>`,
         rectangle: `<svg viewBox="0 0 140 90" width="220" height="141"><rect x="5" y="5" width="130" height="80" fill="#7b1fa2" stroke="#4a148c" stroke-width="3"/></svg>`,
+        pentagon:  `<svg viewBox="0 0 100 100" width="190" height="190"><polygon points="50,6 94,37 78,90 22,90 6,37" fill="#ff8f00" stroke="#e65100" stroke-width="3"/></svg>`,
+        hexagon:   `<svg viewBox="0 0 100 100" width="190" height="190"><polygon points="50,5 93,27 93,73 50,95 7,73 7,27" fill="#6a1b9a" stroke="#4a148c" stroke-width="3"/></svg>`,
+        rhombus:   `<svg viewBox="0 0 100 100" width="190" height="190"><polygon points="50,5 92,50 50,95 8,50" fill="#00838f" stroke="#006064" stroke-width="3"/></svg>`,
+        trapezoid: `<svg viewBox="0 0 120 80" width="210" height="140"><polygon points="20,10 100,10 115,70 5,70" fill="#c62828" stroke="#b71c1c" stroke-width="3"/></svg>`,
       };
       return shapes[p[1]] || '';
     }
@@ -834,9 +838,13 @@ const WP = [
   (a,b)=>({t:`Leo has ${a} ${pick(EMOJIS)}. Sam has ${b}.\nHow many do they have together?`,   c:a+b}),
   (a,b)=>({t:`A box has ${a+b} ${pick(EMOJIS)}. ${b} are taken.\nHow many remain?`,            c:a}),
   (a,b)=>({t:`${a} friends each get ${b} ${pick(EMOJIS)}.\nHow many ${pick(EMOJIS)} in all?`, c:a*b}),
+  (a,b)=>({t:`There were ${a} penguins on the ice.\n${b} went back to the ship.\nHow many penguins are left?`, c:a-b}),
+  (a,b)=>({t:`${a} 🐦 were sitting on a fence.\n${b} flew away. How many are left?`, c:a-b}),
+  (a,b)=>({t:`There are ${a} 🐟 in the pond.\n${b} more swim in. How many now?`, c:a+b}),
+  (a,b)=>({t:`${a} kids were on the playground.\n${b} went inside. How many stayed?`, c:a-b}),
 ];
 function genWord(max) {
-  const tmpl=pick(WP.slice(0,4));          // skip multiplication for now
+  const tmpl=pick([...WP.slice(0,4), ...WP.slice(5)]); // skip multiplication template
   const a=rnd(3,Math.floor(max*0.65));
   const b=rnd(1,Math.min(a,Math.floor(max*0.4)));
   const {t,c}=tmpl(a,b);
@@ -927,6 +935,43 @@ function genMakeTen(target) {
     numDistractors(hideFirst ? a : b, 3, 0, target), 'make-ten');
 }
 
+function genTeenNumber() {
+  const ones = rnd(1, 9), teen = 10 + ones;
+  const fmt = pick(['add', 'missing-part', 'fill-blank']);
+  if (fmt === 'add')
+    return buildQ(`10 + ${ones} = ___`, null, teen, numDistractors(teen,3,11,19), 'teen-number');
+  if (fmt === 'missing-part')
+    return buildQ(`The whole is ${teen}.\nOne part is 10.\nWhat is the other part?`,
+      `numberbond:${teen}:10:${ones}:right`, ones, numDistractors(ones,3,1,9), 'teen-number');
+  return buildQ(`___ is 10 and ${ones} ones.`, null, teen, numDistractors(teen,3,11,19), 'teen-number');
+}
+
+const SHAPE_SIDES = {triangle:3, square:4, rectangle:4, pentagon:5, hexagon:6, rhombus:4, trapezoid:4};
+
+function genShapeAttribute() {
+  const s = pick(['triangle','square','rectangle','pentagon','hexagon']);
+  const attr = pick(['sides','corners']);
+  const answer = SHAPE_SIDES[s];
+  return buildQ(`How many ${attr} does a ${s} have?`, `shape:${s}`, answer,
+    numDistractors(answer, 3, 2, 8), 'shape-attribute');
+}
+
+const COMPOSITIONS = [
+  { q:'2 triangles put together can make a ___.', a:'rhombus',   w:['circle','pentagon','square'] },
+  { q:'2 squares put together make a ___.', a:'rectangle', w:['triangle','hexagon','circle'] },
+  { q:'3 triangles put together can make a ___.', a:'trapezoid', w:['circle','square','hexagon'] },
+  { q:'6 triangles put together make a ___.', a:'hexagon',   w:['square','rectangle','circle'] },
+  { q:'A trapezoid and a triangle can make a larger ___.', a:'triangle',  w:['circle','square','hexagon'] },
+  { q:'2 triangles and a rectangle put together can make a ___.', a:'pentagon', w:['hexagon','circle','square'] },
+  { q:'A rhombus can be split into 2 ___.', a:'triangle',  w:['square','rectangle','hexagon'] },
+  { q:'A rectangle can be split into 2 ___.', a:'square',    w:['triangle','hexagon','circle'] },
+];
+
+function genShapeCompose() {
+  const c = pick(COMPOSITIONS);
+  return buildQW(c.q, null, c.a, c.w, 'shape-compose');
+}
+
 // Money — coins shown as SVG, ask total value
 const COIN_SETS = {
   easy:   [1, 5],           // pennies + nickels (≤30¢)
@@ -954,10 +999,10 @@ function genMoney(difficulty) {
 
 // ─── LEVEL → GENERATOR ARRAYS ────────────────────────────────────────────────
 const LEVELS = {
-  1: [()=>genAdd(5),  ()=>genSub(5),  ()=>genDice(6), ()=>genCompare(9), ()=>genTenFrame(4,5),  ()=>genNumberBond(5)],
-  2: [()=>genAdd(10), ()=>genSub(10), ()=>genDomino(5),()=>genSequence(1),()=>genEmoji(5), ()=>genCompare(9), ()=>genMoney(2), ()=>genTenFrame(9,10), ()=>genNumberBond(8),  ()=>genMakeTen(5)],
-  3: [()=>genAdd(15), ()=>genSub(15), ()=>genShape(),  ()=>genSequence(2),()=>genEmoji(8), ()=>genCompare(20),()=>genMoney(3), ()=>genTenFrame(9,10), ()=>genNumberBond(10), ()=>genMakeTen(10)],
-  4: [()=>genAdd(20), ()=>genSub(20), ()=>genSkip(2),  ()=>genSkip(5),                    ()=>genPlace2(),   ()=>genMoney(4), ()=>genNumberBond(10), ()=>genMakeTen(10)],
+  1: [()=>genAdd(5),  ()=>genSub(5),  ()=>genDice(6),  ()=>genCompare(9),  ()=>genTenFrame(4,5),   ()=>genNumberBond(5),  ()=>genShapeAttribute()],
+  2: [()=>genAdd(10), ()=>genSub(10), ()=>genDomino(5),()=>genSequence(1), ()=>genEmoji(5),  ()=>genCompare(9),  ()=>genMoney(2), ()=>genTenFrame(9,10), ()=>genNumberBond(8),  ()=>genMakeTen(5),  ()=>genTeenNumber(), ()=>genShapeAttribute(), ()=>genSkip(10), ()=>genWord(10)],
+  3: [()=>genAdd(15), ()=>genSub(15), ()=>genShape(),  ()=>genSequence(2), ()=>genEmoji(8),  ()=>genCompare(20), ()=>genMoney(3), ()=>genTenFrame(9,10), ()=>genNumberBond(10), ()=>genMakeTen(10), ()=>genTeenNumber(), ()=>genShapeAttribute(), ()=>genShapeCompose(), ()=>genWord(15)],
+  4: [()=>genAdd(20), ()=>genSub(20), ()=>genSkip(2),  ()=>genSkip(5),     ()=>genPlace2(),   ()=>genMoney(4), ()=>genNumberBond(10), ()=>genMakeTen(10), ()=>genTeenNumber(), ()=>genShapeCompose(), ()=>genWord(20)],
   5: [()=>genWord(20),()=>genClock(false),()=>genFrac(2),()=>genFrac(4),()=>genSkip(5),   ()=>genPlace2(),   ()=>genMoney(5),  ()=>genArray(3)],
   6: [()=>genClock(true),()=>genRuler(),  ()=>genFrac(4),()=>genFrac(2),()=>genWord(20),  ()=>genPlace2(),   ()=>genSkip(10),  ()=>genArray(4)],
   7: [()=>genAdd(100),()=>genSub(100),()=>genPlace3(), ()=>genFrac(3), ()=>genPattern(5), ()=>genEmoji(12),  ()=>genArray(5)],
@@ -986,7 +1031,10 @@ const TOPIC_GENS = {
   'array':       {1:()=>genArray(2),2:()=>genArray(2),3:()=>genArray(3),4:()=>genArray(3),5:()=>genArray(3),6:()=>genArray(4),7:()=>genArray(5),8:()=>genArray(5),9:()=>genArray(6)},
   'ten-frame':   {1:()=>genTenFrame(4,5),2:()=>genTenFrame(9,10),3:()=>genTenFrame(9,10),4:()=>genTenFrame(9,10),5:()=>genTenFrame(9,10),6:()=>genTenFrame(9,10),7:()=>genTenFrame(9,10),8:()=>genTenFrame(9,10),9:()=>genTenFrame(9,10)},
   'number-bond': {1:()=>genNumberBond(5),2:()=>genNumberBond(8),3:()=>genNumberBond(10),4:()=>genNumberBond(10),5:()=>genNumberBond(10),6:()=>genNumberBond(10),7:()=>genNumberBond(10),8:()=>genNumberBond(10),9:()=>genNumberBond(10)},
-  'make-ten':    {1:()=>genMakeTen(5),2:()=>genMakeTen(5),3:()=>genMakeTen(10),4:()=>genMakeTen(10),5:()=>genMakeTen(10),6:()=>genMakeTen(10),7:()=>genMakeTen(10),8:()=>genMakeTen(10),9:()=>genMakeTen(10)},
+  'make-ten':      {1:()=>genMakeTen(5),2:()=>genMakeTen(5),3:()=>genMakeTen(10),4:()=>genMakeTen(10),5:()=>genMakeTen(10),6:()=>genMakeTen(10),7:()=>genMakeTen(10),8:()=>genMakeTen(10),9:()=>genMakeTen(10)},
+  'teen-number':   {1:()=>genTeenNumber(),2:()=>genTeenNumber(),3:()=>genTeenNumber(),4:()=>genTeenNumber(),5:()=>genTeenNumber(),6:()=>genTeenNumber(),7:()=>genTeenNumber(),8:()=>genTeenNumber(),9:()=>genTeenNumber()},
+  'shape-attribute':{1:()=>genShapeAttribute(),2:()=>genShapeAttribute(),3:()=>genShapeAttribute(),4:()=>genShapeAttribute(),5:()=>genShapeAttribute(),6:()=>genShapeAttribute(),7:()=>genShapeAttribute(),8:()=>genShapeAttribute(),9:()=>genShapeAttribute()},
+  'shape-compose': {1:()=>genShapeCompose(),2:()=>genShapeCompose(),3:()=>genShapeCompose(),4:()=>genShapeCompose(),5:()=>genShapeCompose(),6:()=>genShapeCompose(),7:()=>genShapeCompose(),8:()=>genShapeCompose(),9:()=>genShapeCompose()},
 };
 
 function pickQuestion() {
@@ -1042,6 +1090,7 @@ const TOPIC_LABELS = {
   'measurement':'Measurement','bargraph':'Bar Graphs','pattern':'Patterns',
   'money':'Money','array':'Arrays',
   'ten-frame':'Ten Frames','number-bond':'Number Bonds','make-ten':'Making 10',
+  'teen-number':'Teen Numbers','shape-attribute':'Shape Properties','shape-compose':'Shape Patterns',
 };
 
 function loadData() {
