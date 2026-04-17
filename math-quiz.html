@@ -88,7 +88,6 @@ body {
 
 /* === WELCOME === */
 #screen-welcome { text-align: center; }
-#screen-quiz { gap: 10px; }
 #welcome-title {
   font-size: clamp(2rem, 8vw, 3rem);
   color: #f04623;
@@ -203,7 +202,7 @@ body {
   border-radius: 20px;
   border: 2px solid #ffc90c;
 }
-#timer-display.urgent { color: #f04623; animation: timerPulse 0.6s ease-in-out infinite; }
+#timer-display.urgent { animation: timerPulse 0.6s ease-in-out infinite; }
 #progress-bar-wrap {
   width: 100%; height: 14px;
   background: #fee28f; border-radius: 7px; overflow: hidden;
@@ -509,17 +508,17 @@ function numDistractors(correct, count, min, max) {
   return shuffle([...set]).slice(0, count);
 }
 
-function buildQ(text, visual, correct, distractors, topicKey, type = 'number') {
+function buildQ(text, visual, correct, distractors, topicKey) {
   const d = distractors && distractors.length >= 3
     ? distractors
     : numDistractors(correct, 3, 0, 999);
   const pool = shuffle([correct, ...d.filter(x => x !== correct).slice(0, 3)]);
-  return { text, visual, choices: pool, correctIndex: pool.indexOf(correct), topicKey, type };
+  return { text, visual, choices: pool, correctIndex: pool.indexOf(correct), topicKey };
 }
 
 function buildQW(text, visual, correct, wrongs, topicKey) {
   const pool = shuffle([correct, ...wrongs.filter(w => w !== correct).slice(0, 3)]);
-  return { text, visual, choices: pool, correctIndex: pool.indexOf(correct), topicKey, type: 'word' };
+  return { text, visual, choices: pool, correctIndex: pool.indexOf(correct), topicKey };
 }
 
 // ─── SVG / VISUAL RENDERERS ───────────────────────────────────────────────────
@@ -547,48 +546,23 @@ function dotsSVG(n, fill='#e53935', bg='#fff8e7', size=200) {
 }
 
 function diceFaceSVG(n, size = 190) {
-  const pid = `dp${n}${Math.random().toString(36).slice(2,5)}`;
   const pips = (DICE_POS[n] || []).map(([cx,cy]) =>
     `<circle cx="${cx}" cy="${cy}" r="8.5" fill="#1a1a1a" opacity="0.88"/>`).join('');
   return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <pattern id="${pid}" x="0" y="0" width="14.14" height="14.14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <rect width="7.07" height="14.14" fill="#f5f5f5"/>
-        <rect x="7.07" width="7.07" height="14.14" fill="#ebebeb"/>
-      </pattern>
-      <filter id="${pid}s"><feDropShadow dx="0.5" dy="1" stdDeviation="1" flood-opacity="0.25"/></filter>
-    </defs>
-    <rect x="4" y="4" width="92" height="92" rx="18" fill="url(#${pid})" stroke="#bbb" stroke-width="2.5"/>
-    <rect x="4" y="4" width="92" height="92" rx="18" fill="none" stroke="white" stroke-width="3" opacity="0.6"/>
-    <g filter="url(#${pid}s)">${pips}</g>
+    <rect x="4" y="4" width="92" height="92" rx="18" fill="#fff8e7" stroke="#ffcc02" stroke-width="3"/>
+    ${pips}
   </svg>`;
 }
 
 function twoDiceSVG(a, b) {
-  const pid = `td${Math.random().toString(36).slice(2,5)}`;
-  const face = (n, ox) => {
-    const id = `${pid}${n}${ox}`;
-    const pips = (DICE_POS[n] || []).map(([cx,cy]) =>
-      `<circle cx="${cx+ox}" cy="${cy}" r="8.5" fill="#1a1a1a" opacity="0.88"/>`).join('');
-    return `<pattern id="${id}" x="${ox}" y="0" width="14.14" height="14.14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <rect width="7.07" height="14.14" fill="#f5f5f5"/>
-        <rect x="7.07" width="7.07" height="14.14" fill="#ebebeb"/>
-      </pattern>
-      <rect x="${ox+4}" y="4" width="92" height="92" rx="18" fill="url(#${id})" stroke="#bbb" stroke-width="2.5"/>
-      <rect x="${ox+4}" y="4" width="92" height="92" rx="18" fill="none" stroke="white" stroke-width="3" opacity="0.6"/>
-      ${pips}`;
-  };
+  const pipsA = (DICE_POS[a]||[]).map(([cx,cy])=>
+    `<circle cx="${cx}" cy="${cy}" r="8.5" fill="#1a1a1a" opacity="0.88"/>`).join('');
+  const pipsB = (DICE_POS[b]||[]).map(([cx,cy])=>
+    `<circle cx="${cx+130}" cy="${cy}" r="8.5" fill="#1a1a1a" opacity="0.88"/>`).join('');
   return `<svg viewBox="0 0 230 100" width="460" height="200" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      ${face(a, 0)}
-      <pattern id="${pid}b" x="130" y="0" width="14.14" height="14.14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <rect width="7.07" height="14.14" fill="#f5f5f5"/>
-        <rect x="7.07" width="7.07" height="14.14" fill="#ebebeb"/>
-      </pattern>
-    </defs>
-    <rect x="134" y="4" width="92" height="92" rx="18" fill="url(#${pid}b)" stroke="#bbb" stroke-width="2.5"/>
-    <rect x="134" y="4" width="92" height="92" rx="18" fill="none" stroke="white" stroke-width="3" opacity="0.6"/>
-    ${(DICE_POS[b]||[]).map(([cx,cy])=>`<circle cx="${cx+130}" cy="${cy}" r="8.5" fill="#1a1a1a" opacity="0.88"/>`).join('')}
+    <rect x="4" y="4" width="92" height="92" rx="18" fill="#fff8e7" stroke="#ffcc02" stroke-width="3"/>
+    <rect x="134" y="4" width="92" height="92" rx="18" fill="#fff8e7" stroke="#ffcc02" stroke-width="3"/>
+    ${pipsA}${pipsB}
     <text x="117" y="52" text-anchor="middle" dominant-baseline="central"
       font-size="28" font-weight="bold" fill="#f04623" font-family="Open Sans,sans-serif">+</text>
   </svg>`;
@@ -732,6 +706,31 @@ function numberBondSVG(whole, part1, part2, hide) {
   </svg>`;
 }
 
+const SUIT_COLOR = {'♠':'#1a1a1a','♣':'#1a1a1a','♥':'#e53935','♦':'#e53935'};
+
+function cardPatternSVG(symbols) {
+  const cw=44, ch=60, gap=10, pad=10;
+  const total = symbols.length + 1; // +1 for the ? card
+  const W = total*(cw+gap) - gap + pad*2;
+  const H = ch + pad*2;
+  let cards = '';
+  symbols.forEach((s, i) => {
+    const x = pad + i*(cw+gap);
+    const col = SUIT_COLOR[s] || '#333';
+    cards += `<rect x="${x}" y="${pad}" width="${cw}" height="${ch}" rx="8"
+      fill="#fff8e7" stroke="#ffcc02" stroke-width="2.5"/>
+      <text x="${x+cw/2}" y="${pad+ch/2}" text-anchor="middle" dominant-baseline="central"
+        font-size="26" fill="${col}">${s}</text>`;
+  });
+  // ? card
+  const qx = pad + symbols.length*(cw+gap);
+  cards += `<rect x="${qx}" y="${pad}" width="${cw}" height="${ch}" rx="8"
+    fill="#fee28f" stroke="#f04623" stroke-width="2.5"/>
+    <text x="${qx+cw/2}" y="${pad+ch/2}" text-anchor="middle" dominant-baseline="central"
+      font-size="26" font-weight="bold" fill="#f04623">?</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W*2}" height="${H*2}" xmlns="http://www.w3.org/2000/svg">${cards}</svg>`;
+}
+
 function arraySVG(rows, cols) {
   const cell = 32, pad = 14;
   const W = cols * cell + pad * 2;
@@ -751,21 +750,35 @@ function arraySVG(rows, cols) {
 }
 
 function barGraphSVG(values, labels) {
-  const W=268,H=158,bw=42,gap=18,base=H-28,maxH=100,startX=22;
-  const maxV=Math.max(...values);
+  const W=290, H=185, ml=34, mb=32, mt=12, mr=8;
+  const plotW=W-ml-mr, plotH=H-mb-mt, base=mt+plotH;
+  const maxY=10, unitH=plotH/maxY;
+  const bw=40, segW=plotW/values.length;
   const COLORS=['#e91e63','#1976d2','#f57c00','#388e3c'];
-  let bars='',vals='',labs='';
-  values.forEach((v,i)=>{
-    const bh=Math.round((v/maxV)*maxH), x=startX+i*(bw+gap), y=base-bh;
-    bars+=`<rect x="${x}" y="${y}" width="${bw}" height="${bh}" fill="${COLORS[i]}" rx="4"/>`;
-    vals+=`<text x="${x+bw/2}" y="${y-4}" text-anchor="middle" font-size="11"
-      font-family="Open Sans,sans-serif" fill="#333">${v}</text>`;
-    labs+=`<text x="${x+bw/2}" y="${base+16}" text-anchor="middle" font-size="15">${labels[i]}</text>`;
+
+  let grid='', yLabels='';
+  for (let v=0; v<=maxY; v+=2) {
+    const gy=(base - v*unitH).toFixed(1);
+    grid    += `<line x1="${ml}" y1="${gy}" x2="${W-mr}" y2="${gy}" stroke="#ddd" stroke-width="1"/>`;
+    yLabels += `<text x="${ml-5}" y="${gy}" text-anchor="end" dominant-baseline="central"
+      font-size="11" font-family="Open Sans,sans-serif" fill="#555">${v}</text>`;
+  }
+
+  let bars='', labs='';
+  values.forEach((v,i) => {
+    const bh=((v/maxY)*plotH).toFixed(1);
+    const bx=(ml + i*segW + (segW-bw)/2).toFixed(1);
+    const by=(base - (v/maxY)*plotH).toFixed(1);
+    bars += `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" fill="${COLORS[i]}" rx="4"/>`;
+    labs += `<text x="${(ml + i*segW + segW/2).toFixed(1)}" y="${base+20}"
+      text-anchor="middle" font-size="16">${labels[i]}</text>`;
   });
-  return `<svg viewBox="0 0 ${W} ${H}" width="${W*2}" height="${H*2}">
-    <line x1="${startX-4}" y1="${base-maxH-6}" x2="${startX-4}" y2="${base}" stroke="#bbb" stroke-width="1.5"/>
-    <line x1="${startX-4}" y1="${base}" x2="${W-6}" y2="${base}" stroke="#bbb" stroke-width="1.5"/>
-    ${bars}${vals}${labs}
+
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W*2}" height="${H*2}" xmlns="http://www.w3.org/2000/svg">
+    ${grid}
+    <line x1="${ml}" y1="${mt}" x2="${ml}" y2="${base}" stroke="#bbb" stroke-width="1.5"/>
+    <line x1="${ml}" y1="${base}" x2="${W-mr}" y2="${base}" stroke="#bbb" stroke-width="1.5"/>
+    ${yLabels}${bars}${labs}
   </svg>`;
 }
 
@@ -812,6 +825,7 @@ function renderVisual(visual) {
     case 'ruler':   return rulerSVG(+p[1]);
     case 'coins':  return coinsSVG(p[1].split(',').map(Number));
     case 'array':      return arraySVG(+p[1], +p[2]);
+    case 'cardpattern': return cardPatternSVG(p[1].split(','));
     case 'tenframe':   return tenFrameSVG(+p[1], +p[2]);
     case 'numberbond': return numberBondSVG(+p[1], +p[2], +p[3], p[4]);
     case 'bargraph':
@@ -937,13 +951,13 @@ function genRuler() {
   const len=rnd(2,9);
   return buildQ('How long is the object?', `ruler:${len}`, len, numDistractors(len,3,1,10), 'measurement');
 }
-const GEMOJIS=['🐱','🐶','🐸','🐦'];
 function genGraph() {
+  const emojis=['🐱','🐶','🐸','🐦'];
   const vals=[rnd(2,9),rnd(2,9),rnd(2,9),rnd(2,9)];
   const ti=rnd(0,3), c=vals[ti];
   return buildQ(
-    `How many ${GEMOJIS[ti]} are shown in the chart?`,
-    `bargraph:${vals.join(',')}:${GEMOJIS.join(',')}`,
+    `How many ${emojis[ti]} are shown in the chart?`,
+    `bargraph:${vals.join(',')}:${emojis.join(',')}`,
     c, numDistractors(c,3,1,10), 'bargraph'
   );
 }
@@ -963,6 +977,28 @@ function genArray(maxFactor) {
     `${rows} × ${cols} = ?`,
   ]);
   return buildQ(q, `array:${rows}:${cols}`, total, numDistractors(total, 3, 2, maxFactor * maxFactor + 4), 'array');
+}
+
+const SUITS = ['♠','♥','♦','♣'];
+function genCardPattern() {
+  const s = shuffle([...SUITS]);
+  const type = pick(['AB','AB','ABB','AAB','ABC']);
+  let seq, answer;
+  if (type === 'AB') {
+    const [a,b] = s;
+    seq=[a,b,a,b,a]; answer=b;
+  } else if (type === 'ABB') {
+    const [a,b] = s;
+    seq=[a,b,b,a,b]; answer=b;
+  } else if (type === 'AAB') {
+    const [a,b] = s;
+    seq=[a,a,b,a,a]; answer=b;
+  } else {
+    const [a,b,c] = s;
+    seq=[a,b,c,a,b]; answer=c;
+  }
+  const wrongs = SUITS.filter(x=>x!==answer);
+  return buildQW('What comes next?', `cardpattern:${seq.join(',')}`, answer, wrongs, 'card-pattern');
 }
 
 function genTwoDice() {
@@ -1018,7 +1054,7 @@ function genTeenNumber() {
 const SHAPE_SIDES = {triangle:3, square:4, rectangle:4, pentagon:5, hexagon:6, rhombus:4, trapezoid:4};
 
 function genShapeAttribute() {
-  const s = pick(['triangle','square','rectangle','pentagon','hexagon']);
+  const s = pick(['triangle','square','rectangle','pentagon','hexagon','rhombus','trapezoid']);
   const attr = pick(['sides','corners']);
   const answer = SHAPE_SIDES[s];
   return buildQ(`How many ${attr} does a ${s} have?`, `shape:${s}`, answer,
@@ -1068,13 +1104,13 @@ function genMoney(difficulty) {
 
 // ─── LEVEL → GENERATOR ARRAYS ────────────────────────────────────────────────
 const LEVELS = {
-  1: [()=>genAdd(5),  ()=>genSub(5),  ()=>genDice(6),  ()=>genCompare(9),  ()=>genTenFrame(4,5),   ()=>genNumberBond(5),  ()=>genShapeAttribute(), ()=>genTwoDice()],
-  2: [()=>genAdd(10), ()=>genSub(10), ()=>genDomino(5),()=>genSequence(1), ()=>genEmoji(5),  ()=>genCompare(9),  ()=>genMoney(2), ()=>genTenFrame(9,10), ()=>genNumberBond(8),  ()=>genMakeTen(5),  ()=>genTeenNumber(), ()=>genShapeAttribute(), ()=>genSkip(10), ()=>genWord(10), ()=>genTwoDice()],
-  3: [()=>genAdd(15), ()=>genSub(15), ()=>genShape(),  ()=>genSequence(2), ()=>genEmoji(8),  ()=>genCompare(20), ()=>genMoney(3), ()=>genTenFrame(9,10), ()=>genNumberBond(10), ()=>genMakeTen(10), ()=>genTeenNumber(), ()=>genShapeAttribute(), ()=>genShapeCompose(), ()=>genWord(15), ()=>genTwoDice()],
-  4: [()=>genAdd(20), ()=>genSub(20), ()=>genSkip(2),  ()=>genSkip(5),     ()=>genPlace2(),   ()=>genMoney(4), ()=>genNumberBond(10), ()=>genMakeTen(10), ()=>genTeenNumber(), ()=>genShapeCompose(), ()=>genWord(20)],
+  1: [()=>genAdd(5),  ()=>genSub(5),  ()=>genDice(6),  ()=>genCompare(9),  ()=>genTenFrame(4,5),   ()=>genNumberBond(5),  ()=>genShapeAttribute(), ()=>genTwoDice(),    ()=>genCardPattern()],
+  2: [()=>genAdd(10), ()=>genSub(10), ()=>genDomino(5),()=>genEmoji(5),  ()=>genCompare(9),  ()=>genMoney(2), ()=>genTenFrame(9,10), ()=>genNumberBond(8),  ()=>genMakeTen(5),  ()=>genTeenNumber(), ()=>genShapeAttribute(), ()=>genWord(10), ()=>genTwoDice(), ()=>genCardPattern()],
+  3: [()=>genAdd(15), ()=>genSub(15), ()=>genShape(),  ()=>genEmoji(8),  ()=>genCompare(20), ()=>genMoney(3), ()=>genTenFrame(9,10), ()=>genNumberBond(10), ()=>genMakeTen(10), ()=>genTeenNumber(), ()=>genShapeAttribute(), ()=>genShapeCompose(), ()=>genWord(15), ()=>genTwoDice(), ()=>genCardPattern()],
+  4: [()=>genAdd(20), ()=>genSub(20), ()=>genSkip(5),  ()=>genPlace2(),   ()=>genMoney(4), ()=>genNumberBond(10), ()=>genMakeTen(10), ()=>genTeenNumber(), ()=>genShapeCompose(), ()=>genWord(20), ()=>genCardPattern()],
   5: [()=>genWord(20),()=>genClock(false),()=>genFrac(2),()=>genFrac(4),()=>genSkip(5),   ()=>genPlace2(),   ()=>genMoney(5),  ()=>genArray(3)],
   6: [()=>genClock(true),()=>genRuler(),  ()=>genFrac(4),()=>genFrac(2),()=>genWord(20),  ()=>genPlace2(),   ()=>genSkip(10),  ()=>genArray(4)],
-  7: [()=>genAdd(100),()=>genSub(100),()=>genPlace3(), ()=>genFrac(3), ()=>genPattern(5), ()=>genEmoji(12),  ()=>genArray(5)],
+  7: [()=>genAdd(100),()=>genSub(100),()=>genPlace3(), ()=>genFrac(3), ()=>genEmoji(12),  ()=>genArray(5)],
   8: [()=>genWord(100),()=>genPattern(8),()=>genGraph(),()=>genRuler(),()=>genPlace3(),   ()=>genAdd(100),   ()=>genArray(5)],
   9: [()=>genAdd(100),()=>genSub(100),()=>genWord(100),()=>genFrac(4),()=>genPlace3(),   ()=>genGraph(),    ()=>genPattern(10),()=>genArray(6)],
 };
@@ -1086,8 +1122,7 @@ const TOPIC_GENS = {
   'dots':        {1:()=>genDice(6),2:()=>genDomino(5),3:()=>genDomino(6),4:()=>genDomino(6),5:()=>genDomino(6),6:()=>genDomino(6),7:()=>genDomino(6),8:()=>genDomino(6),9:()=>genDomino(6)},
   'emoji-count': {1:()=>genEmoji(4),2:()=>genEmoji(6),3:()=>genEmoji(8),4:()=>genEmoji(9),5:()=>genEmoji(10),6:()=>genEmoji(10),7:()=>genEmoji(12),8:()=>genEmoji(12),9:()=>genEmoji(12)},
   'comparison':  {1:()=>genCompare(9),2:()=>genCompare(9),3:()=>genCompare(20),4:()=>genCompare(50),5:()=>genCompare(50),6:()=>genCompare(99),7:()=>genCompare(99),8:()=>genCompare(99),9:()=>genCompare(99)},
-  'sequence':    {1:()=>genSequence(1),2:()=>genSequence(1),3:()=>genSequence(2),4:()=>genSequence(3),5:()=>genSequence(3),6:()=>genSequence(4),7:()=>genSequence(5),8:()=>genSequence(5),9:()=>genSequence(5)},
-  'shape':       {1:()=>genShape(),2:()=>genShape(),3:()=>genShape(),4:()=>genShape(),5:()=>genShape(),6:()=>genShape(),7:()=>genShape(),8:()=>genShape(),9:()=>genShape()},
+  'shape':{1:()=>genShape(),2:()=>genShape(),3:()=>genShape(),4:()=>genShape(),5:()=>genShape(),6:()=>genShape(),7:()=>genShape(),8:()=>genShape(),9:()=>genShape()},
   'skip-count':  {1:()=>genSkip(2),2:()=>genSkip(2),3:()=>genSkip(2),4:()=>genSkip(2),5:()=>genSkip(5),6:()=>genSkip(10),7:()=>genSkip(10),8:()=>genSkip(10),9:()=>genSkip(10)},
   'place-value': {1:()=>genPlace2(),2:()=>genPlace2(),3:()=>genPlace2(),4:()=>genPlace2(),5:()=>genPlace2(),6:()=>genPlace2(),7:()=>genPlace3(),8:()=>genPlace3(),9:()=>genPlace3()},
   'word-problem':{1:()=>genWord(10),2:()=>genWord(10),3:()=>genWord(15),4:()=>genWord(20),5:()=>genWord(20),6:()=>genWord(20),7:()=>genWord(50),8:()=>genWord(100),9:()=>genWord(100)},
@@ -1103,6 +1138,7 @@ const TOPIC_GENS = {
   'make-ten':      {1:()=>genMakeTen(5),2:()=>genMakeTen(5),3:()=>genMakeTen(10),4:()=>genMakeTen(10),5:()=>genMakeTen(10),6:()=>genMakeTen(10),7:()=>genMakeTen(10),8:()=>genMakeTen(10),9:()=>genMakeTen(10)},
   'teen-number':   {1:()=>genTeenNumber(),2:()=>genTeenNumber(),3:()=>genTeenNumber(),4:()=>genTeenNumber(),5:()=>genTeenNumber(),6:()=>genTeenNumber(),7:()=>genTeenNumber(),8:()=>genTeenNumber(),9:()=>genTeenNumber()},
   'shape-attribute':{1:()=>genShapeAttribute(),2:()=>genShapeAttribute(),3:()=>genShapeAttribute(),4:()=>genShapeAttribute(),5:()=>genShapeAttribute(),6:()=>genShapeAttribute(),7:()=>genShapeAttribute(),8:()=>genShapeAttribute(),9:()=>genShapeAttribute()},
+  'card-pattern':  {1:()=>genCardPattern(),2:()=>genCardPattern(),3:()=>genCardPattern(),4:()=>genCardPattern(),5:()=>genCardPattern(),6:()=>genCardPattern(),7:()=>genCardPattern(),8:()=>genCardPattern(),9:()=>genCardPattern()},
   'dice-add':      {1:()=>genTwoDice(),2:()=>genTwoDice(),3:()=>genTwoDice(),4:()=>genTwoDice(),5:()=>genTwoDice(),6:()=>genTwoDice(),7:()=>genTwoDice(),8:()=>genTwoDice(),9:()=>genTwoDice()},
   'shape-compose': {1:()=>genShapeCompose(),2:()=>genShapeCompose(),3:()=>genShapeCompose(),4:()=>genShapeCompose(),5:()=>genShapeCompose(),6:()=>genShapeCompose(),7:()=>genShapeCompose(),8:()=>genShapeCompose(),9:()=>genShapeCompose()},
 };
@@ -1154,14 +1190,14 @@ const STORE_KEY = 'mathAdventure_v1';
 
 const TOPIC_LABELS = {
   'addition':'Addition','subtraction':'Subtraction','dots':'Counting Dots',
-  'emoji-count':'Counting','comparison':'Comparing','sequence':'Sequences',
+  'emoji-count':'Counting','comparison':'Comparing',
   'shape':'Shapes','skip-count':'Skip Count','place-value':'Place Value',
   'word-problem':'Word Problems','clock':'Telling Time','fraction':'Fractions',
   'measurement':'Measurement','bargraph':'Bar Graphs','pattern':'Patterns',
   'money':'Money','array':'Arrays',
   'ten-frame':'Ten Frames','number-bond':'Number Bonds','make-ten':'Making 10',
   'teen-number':'Teen Numbers','shape-attribute':'Shape Properties','shape-compose':'Shape Patterns',
-  'dice-add':'Dice Addition',
+  'dice-add':'Dice Addition','card-pattern':'Card Patterns',
 };
 
 function loadData() {
