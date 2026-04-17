@@ -384,10 +384,22 @@ body {
   padding: 3px 10px;
   border-radius: 20px;
   color: #131313;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.15s;
 }
+.topic-chip:hover { filter: brightness(1.12); transform: scale(1.05); }
 .chip-mastered  { background: #67a4a9; color: white; }
 .chip-progress  { background: #ffc90c; }
 .chip-weak      { background: rgba(240,70,35,0.2); }
+#topic-label {
+  font-size: clamp(0.75rem, 2vw, 0.9rem);
+  font-weight: 700;
+  background: #ffcc02;
+  color: #131313;
+  padding: 3px 12px;
+  border-radius: 20px;
+}
+#topic-label.hidden { display: none; }
 
 /* === ANIMATIONS === */
 @keyframes bounce {
@@ -448,6 +460,7 @@ body {
     <div id="progress-bar-wrap"><div id="progress-bar-fill"></div></div>
     <div id="header-bottom">
       <span id="star-level"></span>
+      <span id="topic-label" class="hidden"></span>
       <span id="score-display">Score: 0</span>
     </div>
   </div>
@@ -1144,11 +1157,14 @@ const TOPIC_GENS = {
 };
 
 function pickQuestion() {
-  const {difficulty, forceRepeat, lastTopic} = GS;
+  const {difficulty, forceRepeat, lastTopic, focusTopic} = GS;
+  if (focusTopic) {
+    for (let d = difficulty; d >= 1; d--)
+      if (TOPIC_GENS[focusTopic]?.[d]) return TOPIC_GENS[focusTopic][d]();
+  }
   if (forceRepeat && lastTopic && TOPIC_GENS[lastTopic]) {
-    for (let d = difficulty; d >= 1; d--) {
+    for (let d = difficulty; d >= 1; d--)
       if (TOPIC_GENS[lastTopic][d]) return TOPIC_GENS[lastTopic][d]();
-    }
   }
   return pick(LEVELS[difficulty])();
 }
@@ -1255,7 +1271,8 @@ function renderWelcomeStats() {
     const chip = document.createElement('span');
     chip.className = `topic-chip ${cls}`;
     chip.textContent = `${TOPIC_LABELS[key] || key} ${Math.round(pct*100)}%`;
-    chip.title = `${s.correct} / ${s.total} correct`;
+    chip.title = `${s.correct} / ${s.total} correct — tap to practice`;
+    chip.addEventListener('click', () => startGame(key));
     topicsEl.appendChild(chip);
   });
 }
@@ -1265,12 +1282,13 @@ const GS = {
   qNum: 0, score: 0, difficulty: 1,
   lastTopic: null, forceRepeat: false,
   timeLeft: 900, timer: null, current: null,
-  streak: 0,
+  streak: 0, focusTopic: null,
 };
 
 function resetGS() {
   GS.qNum=0; GS.score=0; GS.difficulty=1;
   GS.lastTopic=null; GS.forceRepeat=false; GS.timeLeft=900; GS.streak=0;
+  GS.focusTopic=null;
   if (GS.timer) { clearInterval(GS.timer); GS.timer=null; }
   GS.current=null;
 }
@@ -1351,7 +1369,8 @@ function onAnswer(idx) {
     GS.forceRepeat=false; GS.streak++;
     if (GS.streak >= 2) { GS.difficulty=Math.min(9,GS.difficulty+1); GS.streak=0; }
   } else {
-    GS.forceRepeat=true; GS.streak=0; GS.difficulty=Math.max(1,GS.difficulty-1);
+    GS.forceRepeat = GS.focusTopic ? false : true;
+    GS.streak=0; GS.difficulty=Math.max(1,GS.difficulty-1);
   }
 
   setTimeout(()=>{
@@ -1369,13 +1388,25 @@ function showFeedback(ok, correctAnswer) {
 }
 
 // ─── LIFECYCLE ────────────────────────────────────────────────────────────────
-function startGame() {
+function startGame(topicKey = null) {
   resetGS();
-  GS.difficulty = parseInt(document.getElementById('diff-slider').value, 10);
+  if (topicKey && TOPIC_GENS[topicKey]) {
+    GS.focusTopic = topicKey;
+    GS.difficulty = 1;
+  } else {
+    GS.difficulty = parseInt(document.getElementById('diff-slider').value, 10);
+  }
   setRandomAnimal();
   showScreen('screen-quiz');
   const td = document.getElementById('timer-display');
   td.textContent='15:00'; td.classList.remove('urgent');
+  const lbl = document.getElementById('topic-label');
+  if (GS.focusTopic) {
+    lbl.textContent = TOPIC_LABELS[GS.focusTopic] || GS.focusTopic;
+    lbl.classList.remove('hidden');
+  } else {
+    lbl.classList.add('hidden');
+  }
   startTimer();
   renderQ(pickQuestion());
 }
