@@ -635,6 +635,41 @@ function rulerSVG(len) {
   </svg>`;
 }
 
+function tenFrameSVG(filled, total) {
+  const cols = 5, rows = total / 5;
+  const cell = 44, gap = 3, pad = 10;
+  const W = cols * cell + (cols - 1) * gap + pad * 2;
+  const H = rows * cell + (rows > 1 ? gap : 0) + pad * 2;
+  let cells = '';
+  for (let i = 0; i < total; i++) {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = pad + col * (cell + gap), y = pad + row * (cell + gap);
+    const on = i < filled;
+    cells += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="6"
+      fill="${on ? '#fff3cc' : '#fff'}" stroke="#555" stroke-width="2"/>`;
+    if (on) cells += `<circle cx="${x + cell/2}" cy="${y + cell/2}" r="${cell/2 - 6}" fill="#f04623" opacity="0.9"/>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W * 2}" height="${H * 2}"
+    style="background:#fff8e7;border-radius:12px;border:3px solid #333;">${cells}</svg>`;
+}
+
+function numberBondSVG(whole, part1, part2, hide) {
+  const wcx=120, wcy=48, wr=34, pcx1=55, pcx2=185, pcy=140, pr=28;
+  const lbl = (v, h) => h ? '?' : String(v);
+  const circ = (cx, cy, r, v, h) =>
+    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${h?'#fee28f':'#fff'}" stroke="${h?'#f04623':'#555'}" stroke-width="${h?3:2}"/>
+     <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
+       font-size="${r>30?20:16}" font-weight="bold" font-family="Open Sans,sans-serif"
+       fill="${h?'#f04623':'#333'}">${lbl(v,h)}</text>`;
+  return `<svg viewBox="0 0 240 178" width="280" height="208">
+    <line x1="${wcx}" y1="${wcy+wr}" x2="${pcx1}" y2="${pcy-pr}" stroke="#555" stroke-width="2.5"/>
+    <line x1="${wcx}" y1="${wcy+wr}" x2="${pcx2}" y2="${pcy-pr}" stroke="#555" stroke-width="2.5"/>
+    ${circ(wcx, wcy, wr, whole, hide==='whole')}
+    ${circ(pcx1, pcy, pr, part1, hide==='left')}
+    ${circ(pcx2, pcy, pr, part2, hide==='right')}
+  </svg>`;
+}
+
 function arraySVG(rows, cols) {
   const cell = 32, pad = 14;
   const W = cols * cell + pad * 2;
@@ -713,7 +748,9 @@ function renderVisual(visual) {
     case 'emoji':   return emojiGrid(p[1], +p[2]);
     case 'ruler':   return rulerSVG(+p[1]);
     case 'coins':  return coinsSVG(p[1].split(',').map(Number));
-    case 'array':   return arraySVG(+p[1], +p[2]);
+    case 'array':      return arraySVG(+p[1], +p[2]);
+    case 'tenframe':   return tenFrameSVG(+p[1], +p[2]);
+    case 'numberbond': return numberBondSVG(+p[1], +p[2], +p[3], p[4]);
     case 'bargraph':
       return barGraphSVG(p[1].split(',').map(Number), p[2].split(','));
     case 'shape': {
@@ -857,6 +894,39 @@ function genArray(maxFactor) {
   return buildQ(q, `array:${rows}:${cols}`, total, numDistractors(total, 3, 2, maxFactor * maxFactor + 4), 'array');
 }
 
+function genTenFrame(maxFilled, total) {
+  const filled = rnd(1, maxFilled);
+  const fmt = pick(total === 5 ? ['count','make5'] : ['count','make10']);
+  if (fmt === 'count') {
+    return buildQ('How many dots are there?', `tenframe:${filled}:${total}`,
+      filled, numDistractors(filled, 3, 0, total), 'ten-frame');
+  }
+  const missing = total - filled;
+  return buildQ(`How many more to make ${total}?`, `tenframe:${filled}:${total}`,
+    missing, numDistractors(missing, 3, 0, total), 'ten-frame');
+}
+
+function genNumberBond(max) {
+  const part1 = rnd(1, max - 1), part2 = rnd(1, max - part1);
+  const whole = part1 + part2;
+  const hide = pick(['whole','left','right']);
+  const answer = hide === 'whole' ? whole : hide === 'left' ? part1 : part2;
+  const known = hide === 'left' ? part2 : hide === 'right' ? part1 : null;
+  const qText = hide === 'whole'
+    ? `The parts are ${part1} and ${part2}.\nWhat is the whole?`
+    : `The whole is ${whole}.\nOne part is ${known}.\nWhat is the other part?`;
+  return buildQ(qText, `numberbond:${whole}:${part1}:${part2}:${hide}`,
+    answer, numDistractors(answer, 3, 0, max + 2), 'number-bond');
+}
+
+function genMakeTen(target) {
+  const a = rnd(1, target - 1), b = target - a;
+  const hideFirst = Math.random() > 0.5;
+  const qText = hideFirst ? `___ + ${b} = ${target}` : `${a} + ___ = ${target}`;
+  return buildQ(qText, null, hideFirst ? a : b,
+    numDistractors(hideFirst ? a : b, 3, 0, target), 'make-ten');
+}
+
 // Money — coins shown as SVG, ask total value
 const COIN_SETS = {
   easy:   [1, 5],           // pennies + nickels (≤30¢)
@@ -884,10 +954,10 @@ function genMoney(difficulty) {
 
 // ─── LEVEL → GENERATOR ARRAYS ────────────────────────────────────────────────
 const LEVELS = {
-  1: [()=>genAdd(5),  ()=>genAdd(5),  ()=>genSub(5),  ()=>genDice(6), ()=>genCompare(9)],
-  2: [()=>genAdd(10), ()=>genSub(10), ()=>genDomino(5),()=>genSequence(1),()=>genEmoji(5), ()=>genCompare(9), ()=>genMoney(2)],
-  3: [()=>genAdd(15), ()=>genSub(15), ()=>genShape(),  ()=>genSequence(2),()=>genEmoji(8), ()=>genCompare(20),()=>genMoney(3)],
-  4: [()=>genAdd(20), ()=>genSub(20), ()=>genSkip(2),  ()=>genSkip(5),                    ()=>genPlace2(),   ()=>genMoney(4)],
+  1: [()=>genAdd(5),  ()=>genSub(5),  ()=>genDice(6), ()=>genCompare(9), ()=>genTenFrame(4,5),  ()=>genNumberBond(5)],
+  2: [()=>genAdd(10), ()=>genSub(10), ()=>genDomino(5),()=>genSequence(1),()=>genEmoji(5), ()=>genCompare(9), ()=>genMoney(2), ()=>genTenFrame(9,10), ()=>genNumberBond(8),  ()=>genMakeTen(5)],
+  3: [()=>genAdd(15), ()=>genSub(15), ()=>genShape(),  ()=>genSequence(2),()=>genEmoji(8), ()=>genCompare(20),()=>genMoney(3), ()=>genTenFrame(9,10), ()=>genNumberBond(10), ()=>genMakeTen(10)],
+  4: [()=>genAdd(20), ()=>genSub(20), ()=>genSkip(2),  ()=>genSkip(5),                    ()=>genPlace2(),   ()=>genMoney(4), ()=>genNumberBond(10), ()=>genMakeTen(10)],
   5: [()=>genWord(20),()=>genClock(false),()=>genFrac(2),()=>genFrac(4),()=>genSkip(5),   ()=>genPlace2(),   ()=>genMoney(5),  ()=>genArray(3)],
   6: [()=>genClock(true),()=>genRuler(),  ()=>genFrac(4),()=>genFrac(2),()=>genWord(20),  ()=>genPlace2(),   ()=>genSkip(10),  ()=>genArray(4)],
   7: [()=>genAdd(100),()=>genSub(100),()=>genPlace3(), ()=>genFrac(3), ()=>genPattern(5), ()=>genEmoji(12),  ()=>genArray(5)],
@@ -914,6 +984,9 @@ const TOPIC_GENS = {
   'pattern':     {1:()=>genPattern(2),2:()=>genPattern(2),3:()=>genPattern(3),4:()=>genPattern(3),5:()=>genPattern(4),6:()=>genPattern(5),7:()=>genPattern(5),8:()=>genPattern(8),9:()=>genPattern(10)},
   'money':       {1:()=>genMoney(2),2:()=>genMoney(2),3:()=>genMoney(3),4:()=>genMoney(4),5:()=>genMoney(5),6:()=>genMoney(5),7:()=>genMoney(5),8:()=>genMoney(5),9:()=>genMoney(5)},
   'array':       {1:()=>genArray(2),2:()=>genArray(2),3:()=>genArray(3),4:()=>genArray(3),5:()=>genArray(3),6:()=>genArray(4),7:()=>genArray(5),8:()=>genArray(5),9:()=>genArray(6)},
+  'ten-frame':   {1:()=>genTenFrame(4,5),2:()=>genTenFrame(9,10),3:()=>genTenFrame(9,10),4:()=>genTenFrame(9,10),5:()=>genTenFrame(9,10),6:()=>genTenFrame(9,10),7:()=>genTenFrame(9,10),8:()=>genTenFrame(9,10),9:()=>genTenFrame(9,10)},
+  'number-bond': {1:()=>genNumberBond(5),2:()=>genNumberBond(8),3:()=>genNumberBond(10),4:()=>genNumberBond(10),5:()=>genNumberBond(10),6:()=>genNumberBond(10),7:()=>genNumberBond(10),8:()=>genNumberBond(10),9:()=>genNumberBond(10)},
+  'make-ten':    {1:()=>genMakeTen(5),2:()=>genMakeTen(5),3:()=>genMakeTen(10),4:()=>genMakeTen(10),5:()=>genMakeTen(10),6:()=>genMakeTen(10),7:()=>genMakeTen(10),8:()=>genMakeTen(10),9:()=>genMakeTen(10)},
 };
 
 function pickQuestion() {
@@ -968,6 +1041,7 @@ const TOPIC_LABELS = {
   'word-problem':'Word Problems','clock':'Telling Time','fraction':'Fractions',
   'measurement':'Measurement','bargraph':'Bar Graphs','pattern':'Patterns',
   'money':'Money','array':'Arrays',
+  'ten-frame':'Ten Frames','number-bond':'Number Bonds','make-ten':'Making 10',
 };
 
 function loadData() {
