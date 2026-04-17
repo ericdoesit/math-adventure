@@ -610,28 +610,42 @@ function dominoSVG(a, b) {
   </svg>`;
 }
 
-function clockSVG(hour, half) {
-  const hAngle = hour * 30 + (half ? 15 : 0);
-  const mAngle = half ? 180 : 0;
-  let marks = '';
-  for (let h = 1; h <= 12; h++) {
-    const a = (h * 30 - 90) * Math.PI / 180;
-    marks += `<line x1="${(50+40*Math.cos(a)).toFixed(1)}" y1="${(50+40*Math.sin(a)).toFixed(1)}"
-      x2="${(50+46*Math.cos(a)).toFixed(1)}" y2="${(50+46*Math.sin(a)).toFixed(1)}"
-      stroke="#777" stroke-width="2.5" stroke-linecap="round"/>`;
+function clockSVG(hour, half, size=300) {
+  const cx=100, cy=100;
+  const toRad = d => d * Math.PI / 180;
+  const hDeg = (hour % 12) * 30 + (half ? 15 : 0);
+  const mDeg = half ? 180 : 0;
+
+  const ticks = Array.from({length:12}, (_,i) => {
+    const a = toRad(i*30-90), r1=83, r2=91;
+    return `<line x1="${(cx+r1*Math.cos(a)).toFixed(1)}" y1="${(cy+r1*Math.sin(a)).toFixed(1)}"
+      x2="${(cx+r2*Math.cos(a)).toFixed(1)}" y2="${(cy+r2*Math.sin(a)).toFixed(1)}"
+      stroke="#ccc" stroke-width="2.5" stroke-linecap="round"/>`;
+  }).join('');
+
+  const nums = Array.from({length:12}, (_,i) => {
+    const n=i+1, a=toRad(n*30-90);
+    return `<text x="${(cx+74*Math.cos(a)).toFixed(1)}" y="${(cy+74*Math.sin(a)).toFixed(1)}"
+      text-anchor="middle" dominant-baseline="central"
+      font-size="14" font-weight="700" font-family="Open Sans,sans-serif" fill="#222">${n}</text>`;
+  }).join('');
+
+  function hand(angleDeg, length, baseHalf, tipHalf, fill) {
+    const a=toRad(angleDeg-90), perp=a+Math.PI/2;
+    const f=v=>v.toFixed(2);
+    const pt=(d,s)=>[cx+d*Math.cos(a)+s*Math.cos(perp), cy+d*Math.sin(a)+s*Math.sin(perp)];
+    const rs=length-tipHalf*4;
+    const [bl,br,ntl,ntr,tip]=[pt(0,baseHalf),pt(0,-baseHalf),pt(rs,tipHalf),pt(rs,-tipHalf),pt(length,0)];
+    return `<path d="M ${f(bl[0])},${f(bl[1])} L ${f(ntl[0])},${f(ntl[1])} Q ${f(tip[0])},${f(tip[1])} ${f(ntr[0])},${f(ntr[1])} L ${f(br[0])},${f(br[1])} Z" fill="${fill}"/>`;
   }
-  const nums = [{n:12,x:50,y:10},{n:3,x:90,y:53},{n:6,x:50,y:95},{n:9,x:10,y:53}]
-    .map(({n,x,y})=>`<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle"
-      font-size="10" font-weight="bold" font-family="Open Sans,sans-serif" fill="#333">${n}</text>`)
-    .join('');
-  return `<svg viewBox="0 0 100 100" width="210" height="210">
-    <circle cx="50" cy="50" r="48" fill="#fff8e7" stroke="#ffcc02" stroke-width="3"/>
-    ${marks}${nums}
-    <line x1="50" y1="50" x2="50" y2="26" stroke="#222" stroke-width="5" stroke-linecap="round"
-      transform="rotate(${hAngle},50,50)"/>
-    <line x1="50" y1="50" x2="50" y2="13" stroke="#555" stroke-width="3" stroke-linecap="round"
-      transform="rotate(${mAngle},50,50)"/>
-    <circle cx="50" cy="50" r="4" fill="#222"/>
+
+  return `<svg viewBox="0 0 200 200" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="${cx}" cy="${cy}" r="97" fill="#ffcc02"/>
+    <circle cx="${cx}" cy="${cy}" r="91" fill="#fff8e7"/>
+    ${ticks}${nums}
+    ${hand(hDeg,52,6,2.8,'#1a1a1a')}
+    ${hand(mDeg,72,4,2,'#333')}
+    <circle cx="${cx}" cy="${cy}" r="5.5" fill="#f04623" stroke="#9c1700" stroke-width="1.5"/>
   </svg>`;
 }
 
