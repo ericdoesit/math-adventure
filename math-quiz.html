@@ -1373,6 +1373,7 @@ function onAnswer(idx) {
     GS.forceRepeat = GS.focusTopic ? false : true;
     GS.streak=0; GS.difficulty=Math.max(1,GS.difficulty-1);
   }
+  if (!GS.focusTopic) document.getElementById('topic-label').textContent = `Level ${GS.difficulty}`;
 
   setTimeout(()=>{
     GS.qNum++;
@@ -1402,12 +1403,8 @@ function startGame(topicKey = null) {
   const td = document.getElementById('timer-display');
   td.textContent='15:00'; td.classList.remove('urgent');
   const lbl = document.getElementById('topic-label');
-  if (GS.focusTopic) {
-    lbl.textContent = TOPIC_LABELS[GS.focusTopic] || GS.focusTopic;
-    lbl.classList.remove('hidden');
-  } else {
-    lbl.classList.add('hidden');
-  }
+  lbl.textContent = GS.focusTopic ? (TOPIC_LABELS[GS.focusTopic] || GS.focusTopic) : `Level ${GS.difficulty}`;
+  lbl.classList.remove('hidden');
   startTimer();
   renderQ(pickQuestion());
 }
