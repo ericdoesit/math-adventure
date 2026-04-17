@@ -40,7 +40,6 @@ body {
 @media (max-width: 700px) {
   .screen { width: 95vw; border-radius: 12px; }
   body { padding: 12px 8px; align-items: flex-start; }
-  #welcome-title { font-size: clamp(1.6rem, 8vw, 2.4rem); }
   #question-text { font-size: clamp(1.2rem, 5.5vw, 1.8rem); }
   .choice-btn { font-size: clamp(1rem, 5vw, 1.4rem); padding: 12px 8px; min-height: 54px; }
   #star-level { font-size: 0.7rem; flex-wrap: wrap; }
@@ -88,11 +87,8 @@ body {
 
 /* === WELCOME === */
 #screen-welcome { text-align: center; }
-#welcome-title {
-  font-size: clamp(2rem, 8vw, 3rem);
-  color: #f04623;
-  text-shadow: 2px 2px 0 #ffc90c;
-}
+#welcome-logo { width: 380px; max-width: 90%; }
+@media (max-width: 700px) { #welcome-logo { width: 200px; } }
 #welcome-subtitle { font-size: clamp(1rem, 3.5vw, 1.3rem); color: #131313; }
 .welcome-rules {
   background: #fee28f;
@@ -309,6 +305,10 @@ body {
 .choice-btn.was-right  { background:rgba(103,164,169,0.92)!important; outline:3px solid #ffc90c; animation:bounce 0.4s ease; color:white!important; }
 .choice-btn.was-wrong  { background:rgba(240,70,35,0.92)!important; animation:shake 0.4s ease; color:white!important; }
 .choice-btn.show-right { background:rgba(103,164,169,0.92)!important; outline:3px solid #ffc90c; color:white!important; }
+.card-choices .choice-btn { background:#fff8e7!important; border:2.5px solid #ffcc02; color:#1a1a1a; font-size:clamp(2rem,5vw,3rem); }
+.card-choices .choice-btn.was-right  { background:rgba(103,164,169,0.92)!important; }
+.card-choices .choice-btn.was-wrong  { background:rgba(240,70,35,0.92)!important; }
+.card-choices .choice-btn.show-right { background:rgba(103,164,169,0.92)!important; }
 
 /* === END SCREEN === */
 #screen-end { text-align: center; gap: 16px; padding: 20px; }
@@ -426,7 +426,7 @@ body {
 
 <!-- WELCOME -->
 <div id="screen-welcome" class="screen active">
-  <div id="welcome-title">Math Adventure! 🧮</div>
+  <img id="welcome-logo" src="logo.png" alt="Math Adventure">
   <div id="welcome-subtitle">Let's practice math together!</div>
   <ul class="welcome-rules">
     <li>20 questions to answer</li>
@@ -1331,8 +1331,15 @@ function renderQ(q) {
     viz.innerHTML=''; viz.classList.remove('show');
   }
 
+  const isCard = q.topicKey === 'card-pattern';
+  document.getElementById('choices-grid').className = isCard ? 'card-choices' : '';
   document.querySelectorAll('.choice-btn').forEach((btn, i) => {
-    btn.textContent = q.choices[i];
+    if (isCard) {
+      const col = (q.choices[i]==='♥'||q.choices[i]==='♦') ? '#e53935' : '#1a1a1a';
+      btn.innerHTML = `<span style="color:${col}">${q.choices[i]}</span>`;
+    } else {
+      btn.textContent = q.choices[i];
+    }
     btn.disabled = false;
     btn.className = 'choice-btn';
   });
