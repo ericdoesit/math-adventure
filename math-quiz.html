@@ -398,6 +398,7 @@ body {
   color: #131313;
   padding: 3px 12px;
   border-radius: 20px;
+  align-self: flex-start;
 }
 #topic-label.hidden { display: none; }
 
@@ -453,6 +454,7 @@ body {
 <div id="screen-quiz" class="screen">
   <div class="animal-wrap animal-behind"><img id="animal-quiz" src="" alt=""></div>
   <div id="header-bar">
+    <span id="topic-label" class="hidden"></span>
     <div id="header-top">
       <span id="progress-text">Question 1 of 20</span>
       <span id="timer-display">15:00</span>
@@ -460,7 +462,6 @@ body {
     <div id="progress-bar-wrap"><div id="progress-bar-fill"></div></div>
     <div id="header-bottom">
       <span id="star-level"></span>
-      <span id="topic-label" class="hidden"></span>
       <span id="score-display">Score: 0</span>
     </div>
   </div>
