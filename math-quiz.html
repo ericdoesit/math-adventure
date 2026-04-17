@@ -1182,7 +1182,7 @@ const DIFF_LABELS = {
 function setRandomAnimal() {
   if (!ANIMAL_IMAGES.length) return;
   const img = pick(ANIMAL_IMAGES);
-  const url = `images/${img}.png`;
+  const url = `animals/${img}.png`;
   document.getElementById('animal-welcome').src = url;
   document.getElementById('animal-quiz').src = url;
 }
@@ -1460,7 +1460,7 @@ function showScreen(id) {
 // ─── EVENTS ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    const res = await fetch('images/manifest.json');
+    const res = await fetch('animals/manifest.json');
     ANIMAL_IMAGES = await res.json();
   } catch(e) {}
   initSlider();
