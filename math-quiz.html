@@ -628,11 +628,11 @@ function dominoSVG(a, b) {
   </svg>`;
 }
 
-function clockSVG(hour, half, size=300) {
+function clockSVG(hour, minutes, size=300) {
   const cx=100, cy=100;
   const toRad = d => d * Math.PI / 180;
-  const hDeg = (hour % 12) * 30 + (half ? 15 : 0);
-  const mDeg = half ? 180 : 0;
+  const hDeg = (hour % 12) * 30 + minutes * 0.5;
+  const mDeg = minutes * 6;
 
   const ticks = Array.from({length:12}, (_,i) => {
     const a = toRad(i*30-90), r1=83, r2=91;
@@ -908,7 +908,7 @@ function renderVisual(visual) {
     case 'twodice': return twoDiceSVG(+p[1], +p[2]);
     case 'dots':    return dotsSVG(+p[1]);
     case 'domino':  return dominoSVG(+p[1], +p[2]);
-    case 'clock':   return clockSVG(+p[1], +p[2]===30);
+    case 'clock':   return clockSVG(+p[1], +p[2]);
     case 'fracCircle': return fracCircleSVG(+p[1], +p[2]);
     case 'fracBar':    return fracBarSVG(+p[1], +p[2]);
     case 'emoji':      return emojiGrid(p[1], +p[2]);
@@ -1034,17 +1034,27 @@ function genWord(max) {
   if (c<0||c>max*1.1) return genWord(max);
   return buildQ(t, null, c, numDistractors(c,3,0,max+5), 'word-problem');
 }
-function genClock(allowHalf) {
-  const h=rnd(1,12), half=allowHalf&&Math.random()>0.5;
-  const c=`${h}:${half?'30':'00'}`;
-  const wrongs=[];
-  for (let i=1;i<=12&&wrongs.length<3;i++) {
-    if (i===h) continue;
-    const opt=`${i}:${(allowHalf&&Math.random()>0.5)?'30':'00'}`;
-    if (!wrongs.includes(opt)) wrongs.push(opt);
+function genClock(increment) {
+  const validMins = [];
+  for (let m = 0; m < 60; m += increment) validMins.push(m);
+  const h = rnd(1, 12);
+  const min = pick(validMins);
+  const fmt = m => String(m).padStart(2, '0');
+  const c = `${h}:${fmt(min)}`;
+  const wrongs = [];
+  const wrongHours = shuffle([1,2,3,4,5,6,7,8,9,10,11,12].filter(x => x !== h));
+  for (const wh of wrongHours) {
+    if (wrongs.length >= 3) break;
+    const wm = pick(validMins);
+    const opt = `${wh}:${fmt(wm)}`;
+    if (opt !== c && !wrongs.includes(opt)) wrongs.push(opt);
   }
-  if (wrongs.length<3) wrongs.push(...['1:00','2:00','4:00','5:00'].filter(x=>x!==c&&!wrongs.includes(x)));
-  return buildQW('What time does the clock show?', `clock:${h}:${half?30:0}`, c, wrongs.slice(0,3), 'clock');
+  while (wrongs.length < 3) {
+    const wm = pick(validMins);
+    const opt = `${rnd(1,12)}:${fmt(wm)}`;
+    if (opt !== c && !wrongs.includes(opt)) wrongs.push(opt);
+  }
+  return buildQW('What time does the clock show?', `clock:${h}:${min}`, c, wrongs.slice(0,3), 'clock');
 }
 function genFrac(den) {
   const num=rnd(1,den-1);
@@ -1211,10 +1221,10 @@ const LEVELS = {
   2: [()=>genAdd(10), ()=>genSub(10), ()=>genDomino(5),()=>genEmoji(5),  ()=>genCompare(9),  ()=>genMoney(2), ()=>genTenFrame(9,10), ()=>genNumberBond(8),  ()=>genMakeTen(5),  ()=>genTeenNumber(), ()=>genShapeAttribute(), ()=>genWord(10), ()=>genTwoDice(), ()=>genCardPattern()],
   3: [()=>genAdd(15), ()=>genSub(15), ()=>genShape(),  ()=>genEmoji(8),  ()=>genCompare(20), ()=>genMoney(3), ()=>genTenFrame(9,10), ()=>genNumberBond(10), ()=>genMakeTen(10), ()=>genTeenNumber(), ()=>genShapeAttribute(), ()=>genWord(15), ()=>genTwoDice(), ()=>genCardPattern()],
   4: [()=>genAdd(20), ()=>genSub(20), ()=>genSkip(5),  ()=>genPlace2(),   ()=>genMoney(4), ()=>genNumberBond(10), ()=>genMakeTen(10), ()=>genTeenNumber(), ()=>genWord(20), ()=>genCardPattern()],
-  5: [()=>genWord(20),()=>genClock(false),()=>genFrac(2),()=>genFrac(4),()=>genSkip(5),   ()=>genPlace2(),   ()=>genMoney(5),  ()=>genArray(3),  ()=>genDivision(3), ()=>genMultGroup(3)],
-  6: [()=>genClock(true),()=>genRuler(),  ()=>genFrac(4),()=>genFrac(2),()=>genWord(20),  ()=>genPlace2(),   ()=>genSkip(10),  ()=>genArray(4),  ()=>genDivision(4), ()=>genMultGroup(4)],
-  7: [()=>genAdd(100),()=>genSub(100),()=>genPlace3(), ()=>genFrac(3), ()=>genEmoji(12),  ()=>genArray(5),  ()=>genDivision(5), ()=>genMultGroup(5)],
-  8: [()=>genWord(100),()=>genPattern(8),()=>genGraph(),()=>genRuler(),()=>genPlace3(),   ()=>genAdd(100),   ()=>genArray(5),  ()=>genDivision(5)],
+  5: [()=>genWord(20),()=>genClock(60), ()=>genFrac(2),()=>genFrac(4),()=>genSkip(5),   ()=>genPlace2(),   ()=>genMoney(5),  ()=>genArray(3),  ()=>genDivision(3), ()=>genMultGroup(3)],
+  6: [()=>genClock(30),()=>genRuler(),  ()=>genFrac(4),()=>genFrac(2),()=>genWord(20),  ()=>genPlace2(),   ()=>genSkip(10),  ()=>genArray(4),  ()=>genDivision(4), ()=>genMultGroup(4)],
+  7: [()=>genAdd(100),()=>genSub(100),()=>genClock(15),()=>genPlace3(), ()=>genFrac(3), ()=>genEmoji(12),  ()=>genArray(5),  ()=>genDivision(5), ()=>genMultGroup(5)],
+  8: [()=>genWord(100),()=>genPattern(8),()=>genGraph(),()=>genRuler(),()=>genClock(5),()=>genPlace3(),   ()=>genAdd(100),   ()=>genArray(5),  ()=>genDivision(5)],
   9: [()=>genAdd(100),()=>genSub(100),()=>genWord(100),()=>genFrac(4),()=>genPlace3(),   ()=>genGraph(),    ()=>genPattern(10),()=>genArray(6),  ()=>genDivision(6)],
 };
 
@@ -1229,7 +1239,7 @@ const TOPIC_GENS = {
   'skip-count':  {1:()=>genSkip(2),2:()=>genSkip(2),3:()=>genSkip(2),4:()=>genSkip(2),5:()=>genSkip(5),6:()=>genSkip(10),7:()=>genSkip(10),8:()=>genSkip(10),9:()=>genSkip(10)},
   'place-value': {1:()=>genPlace2(),2:()=>genPlace2(),3:()=>genPlace2(),4:()=>genPlace2(),5:()=>genPlace2(),6:()=>genPlace2(),7:()=>genPlace3(),8:()=>genPlace3(),9:()=>genPlace3()},
   'word-problem':{1:()=>genWord(10),2:()=>genWord(10),3:()=>genWord(15),4:()=>genWord(20),5:()=>genWord(20),6:()=>genWord(20),7:()=>genWord(50),8:()=>genWord(100),9:()=>genWord(100)},
-  'clock':       {1:()=>genClock(false),2:()=>genClock(false),3:()=>genClock(false),4:()=>genClock(false),5:()=>genClock(false),6:()=>genClock(true),7:()=>genClock(true),8:()=>genClock(true),9:()=>genClock(true)},
+  'clock':       {1:()=>genClock(60),2:()=>genClock(60),3:()=>genClock(60),4:()=>genClock(60),5:()=>genClock(60),6:()=>genClock(30),7:()=>genClock(15),8:()=>genClock(5),9:()=>genClock(5)},
   'fraction':    {1:()=>genFrac(2),2:()=>genFrac(2),3:()=>genFrac(2),4:()=>genFrac(2),5:()=>genFrac(2),6:()=>genFrac(4),7:()=>genFrac(3),8:()=>genFrac(4),9:()=>genFrac(4)},
   'measurement': {1:()=>genRuler(),2:()=>genRuler(),3:()=>genRuler(),4:()=>genRuler(),5:()=>genRuler(),6:()=>genRuler(),7:()=>genRuler(),8:()=>genRuler(),9:()=>genRuler()},
   'bargraph':    {1:()=>genGraph(),2:()=>genGraph(),3:()=>genGraph(),4:()=>genGraph(),5:()=>genGraph(),6:()=>genGraph(),7:()=>genGraph(),8:()=>genGraph(),9:()=>genGraph()},
