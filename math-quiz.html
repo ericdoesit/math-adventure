@@ -332,13 +332,6 @@ body {
 #end-score { font-size: clamp(1.2rem, 4.5vw, 1.7rem); color: #131313; font-weight: 600; }
 #end-time  { font-size: clamp(0.95rem, 3.2vw, 1.2rem); color: #131313; }
 #end-msg   { font-size: clamp(1rem, 3.5vw, 1.4rem); color: #131313; max-width: 380px; }
-.confetti-piece {
-  position: fixed;
-  font-size: 1.8rem;
-  pointer-events: none;
-  z-index: 999;
-  animation: confettiFall linear forwards;
-}
 
 /* === VISUALS === */
 .emoji-grid {
@@ -430,12 +423,8 @@ body {
 @keyframes timerPulse {
   0%,100%{color:#d32f2f} 50%{color:#ff6f00}
 }
-@keyframes confettiFall {
-  0%  {transform:translateY(-30px) rotate(0deg);opacity:1}
-  85% {opacity:1}
-  100%{transform:translateY(105vh) rotate(700deg);opacity:0}
-}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 </head>
 <body>
 
@@ -782,6 +771,45 @@ function arraySVG(rows, cols) {
     style="background:#fff8e7;border-radius:12px;border:3px solid #ffcc02;">${dots}</svg>`;
 }
 
+function divisionSVG(dividend, divisor, style) {
+  const quotient = dividend / divisor;
+  const sec = 44, margin = 10;
+  const fill = '#6a9fd8';
+  if (style === 'partitive') {
+    const cols = divisor, rows = quotient;
+    const W = cols * sec + margin * 2;
+    const H = rows * sec + margin * 2;
+    let dots = '', lines = '';
+    for (let c = 0; c < cols; c++) {
+      const cx = margin + (c + 0.5) * sec;
+      for (let r = 0; r < rows; r++) {
+        dots += `<circle cx="${cx}" cy="${margin + (r + 0.5) * sec}" r="11" fill="${fill}" opacity="0.9"/>`;
+      }
+      if (c < cols - 1) {
+        const lx = margin + (c + 1) * sec;
+        lines += `<line x1="${lx}" y1="4" x2="${lx}" y2="${H-4}" stroke="#111" stroke-width="2.5"/>`;
+      }
+    }
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W*2}" height="${H*2}" style="background:#fff8e7;border-radius:12px;border:3px solid #ffcc02;">${dots}${lines}</svg>`;
+  } else {
+    const rows = quotient, cols = divisor;
+    const W = cols * sec + margin * 2;
+    const H = rows * sec + margin * 2;
+    let dots = '', lines = '';
+    for (let r = 0; r < rows; r++) {
+      const cy = margin + (r + 0.5) * sec;
+      for (let c = 0; c < cols; c++) {
+        dots += `<circle cx="${margin + (c + 0.5) * sec}" cy="${cy}" r="11" fill="${fill}" opacity="0.9"/>`;
+      }
+      if (r < rows - 1) {
+        const ly = margin + (r + 1) * sec;
+        lines += `<line x1="4" y1="${ly}" x2="${W-4}" y2="${ly}" stroke="#111" stroke-width="2.5"/>`;
+      }
+    }
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W*2}" height="${H*2}" style="background:#fff8e7;border-radius:12px;border:3px solid #ffcc02;">${dots}${lines}</svg>`;
+  }
+}
+
 function barGraphSVG(values, labels) {
   const W=290, H=185, ml=34, mb=32, mt=12, mr=8;
   const plotW=W-ml-mr, plotH=H-mb-mt, base=mt+plotH;
@@ -858,6 +886,7 @@ function renderVisual(visual) {
     case 'ruler':   return rulerSVG(+p[1]);
     case 'coins':  return coinsSVG(p[1].split(',').map(Number));
     case 'array':      return arraySVG(+p[1], +p[2]);
+    case 'division':   return divisionSVG(+p[1], +p[2], p[3]);
     case 'cardpattern': return cardPatternSVG(p[1].split(','));
     case 'tenframe':   return tenFrameSVG(+p[1], +p[2]);
     case 'numberbond': return numberBondSVG(+p[1], +p[2], +p[3], p[4]);
@@ -1001,6 +1030,18 @@ function genPattern(maxStep) {
     numDistractors(c,3,0,c+step*2), 'pattern');
 }
 
+function genDivision(maxFactor) {
+  const divisor = rnd(2, maxFactor);
+  const quotient = rnd(2, maxFactor);
+  const dividend = divisor * quotient;
+  const style = pick(['partitive', 'quotative']);
+  const text = style === 'partitive'
+    ? `${dividend} dots split into ${divisor} equal groups.\n${dividend} ÷ ${divisor} = ?`
+    : `${dividend} dots arranged in groups of ${divisor}.\n${dividend} ÷ ${divisor} = ?`;
+  return buildQ(text, `division:${dividend}:${divisor}:${style}`, quotient,
+    numDistractors(quotient, 3, 1, maxFactor * maxFactor), 'division');
+}
+
 function genArray(maxFactor) {
   const rows = rnd(2, maxFactor), cols = rnd(2, maxFactor);
   const total = rows * cols;
@@ -1141,11 +1182,11 @@ const LEVELS = {
   2: [()=>genAdd(10), ()=>genSub(10), ()=>genDomino(5),()=>genEmoji(5),  ()=>genCompare(9),  ()=>genMoney(2), ()=>genTenFrame(9,10), ()=>genNumberBond(8),  ()=>genMakeTen(5),  ()=>genTeenNumber(), ()=>genShapeAttribute(), ()=>genWord(10), ()=>genTwoDice(), ()=>genCardPattern()],
   3: [()=>genAdd(15), ()=>genSub(15), ()=>genShape(),  ()=>genEmoji(8),  ()=>genCompare(20), ()=>genMoney(3), ()=>genTenFrame(9,10), ()=>genNumberBond(10), ()=>genMakeTen(10), ()=>genTeenNumber(), ()=>genShapeAttribute(), ()=>genShapeCompose(), ()=>genWord(15), ()=>genTwoDice(), ()=>genCardPattern()],
   4: [()=>genAdd(20), ()=>genSub(20), ()=>genSkip(5),  ()=>genPlace2(),   ()=>genMoney(4), ()=>genNumberBond(10), ()=>genMakeTen(10), ()=>genTeenNumber(), ()=>genShapeCompose(), ()=>genWord(20), ()=>genCardPattern()],
-  5: [()=>genWord(20),()=>genClock(false),()=>genFrac(2),()=>genFrac(4),()=>genSkip(5),   ()=>genPlace2(),   ()=>genMoney(5),  ()=>genArray(3)],
-  6: [()=>genClock(true),()=>genRuler(),  ()=>genFrac(4),()=>genFrac(2),()=>genWord(20),  ()=>genPlace2(),   ()=>genSkip(10),  ()=>genArray(4)],
-  7: [()=>genAdd(100),()=>genSub(100),()=>genPlace3(), ()=>genFrac(3), ()=>genEmoji(12),  ()=>genArray(5)],
-  8: [()=>genWord(100),()=>genPattern(8),()=>genGraph(),()=>genRuler(),()=>genPlace3(),   ()=>genAdd(100),   ()=>genArray(5)],
-  9: [()=>genAdd(100),()=>genSub(100),()=>genWord(100),()=>genFrac(4),()=>genPlace3(),   ()=>genGraph(),    ()=>genPattern(10),()=>genArray(6)],
+  5: [()=>genWord(20),()=>genClock(false),()=>genFrac(2),()=>genFrac(4),()=>genSkip(5),   ()=>genPlace2(),   ()=>genMoney(5),  ()=>genArray(3),  ()=>genDivision(3)],
+  6: [()=>genClock(true),()=>genRuler(),  ()=>genFrac(4),()=>genFrac(2),()=>genWord(20),  ()=>genPlace2(),   ()=>genSkip(10),  ()=>genArray(4),  ()=>genDivision(4)],
+  7: [()=>genAdd(100),()=>genSub(100),()=>genPlace3(), ()=>genFrac(3), ()=>genEmoji(12),  ()=>genArray(5),  ()=>genDivision(5)],
+  8: [()=>genWord(100),()=>genPattern(8),()=>genGraph(),()=>genRuler(),()=>genPlace3(),   ()=>genAdd(100),   ()=>genArray(5),  ()=>genDivision(5)],
+  9: [()=>genAdd(100),()=>genSub(100),()=>genWord(100),()=>genFrac(4),()=>genPlace3(),   ()=>genGraph(),    ()=>genPattern(10),()=>genArray(6),  ()=>genDivision(6)],
 };
 
 // topic → generator at each level (for repeat-on-miss)
@@ -1174,6 +1215,7 @@ const TOPIC_GENS = {
   'card-pattern':  {1:()=>genCardPattern(),2:()=>genCardPattern(),3:()=>genCardPattern(),4:()=>genCardPattern(),5:()=>genCardPattern(),6:()=>genCardPattern(),7:()=>genCardPattern(),8:()=>genCardPattern(),9:()=>genCardPattern()},
   'dice-add':      {1:()=>genTwoDice(),2:()=>genTwoDice(),3:()=>genTwoDice(),4:()=>genTwoDice(),5:()=>genTwoDice(),6:()=>genTwoDice(),7:()=>genTwoDice(),8:()=>genTwoDice(),9:()=>genTwoDice()},
   'shape-compose': {1:()=>genShapeCompose(),2:()=>genShapeCompose(),3:()=>genShapeCompose(),4:()=>genShapeCompose(),5:()=>genShapeCompose(),6:()=>genShapeCompose(),7:()=>genShapeCompose(),8:()=>genShapeCompose(),9:()=>genShapeCompose()},
+  'division':      {1:()=>genDivision(2),2:()=>genDivision(2),3:()=>genDivision(3),4:()=>genDivision(3),5:()=>genDivision(3),6:()=>genDivision(4),7:()=>genDivision(5),8:()=>genDivision(5),9:()=>genDivision(6)},
 };
 
 function pickQuestion() {
@@ -1455,18 +1497,27 @@ function endGame() {
 }
 
 function spawnConfetti() {
-  document.querySelectorAll('.confetti-piece').forEach(e=>e.remove());
-  const pool='🌟⭐🎉🎊💫🏆🌈✨'.split('');
-  for (let i=0;i<24;i++) {
-    const el=document.createElement('div');
-    el.className='confetti-piece';
-    el.textContent=pick(pool);
-    el.style.left=`${rnd(2,95)}%`;
-    el.style.top='-40px';
-    el.style.animationDuration=`${rnd(20,38)/10}s`;
-    el.style.animationDelay=`${rnd(0,22)/10}s`;
-    document.body.appendChild(el);
-    el.addEventListener('animationend',()=>el.remove());
+  if (typeof window.confetti !== 'function') return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const rect = document.getElementById('screen-end').getBoundingClientRect();
+  const px = rect.left + rect.width / 2;
+  const py = rect.top + rect.height / 2;
+  const origin = { x: px / window.innerWidth, y: py / window.innerHeight };
+
+  const tickValues = [100, 150, 180, 220, 260, 300, 360];
+  for (let i = 0; i < 16; i++) {
+    window.confetti({
+      origin,
+      ticks: tickValues[Math.floor(Math.random() * tickValues.length)],
+      gravity: 1.15,
+      scalar: 1.2 + Math.random() * 0.6,
+      drift: 0,
+      particleCount: 20 + Math.floor(Math.random() * 20),
+      spread: 100 + Math.floor(Math.random() * 120),
+      startVelocity: 35 + Math.floor(Math.random() * 30),
+      decay: 0.88 + Math.random() * 0.07,
+    });
   }
 }
 
