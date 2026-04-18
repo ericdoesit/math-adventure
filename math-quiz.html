@@ -347,6 +347,28 @@ body {
   padding: 10px;
 }
 
+.multi-group-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  padding: 8px;
+  background: rgba(254,226,143,0.75);
+  border: 2px solid #ffc90c;
+  border-radius: 14px;
+}
+.emoji-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: center;
+  background: rgba(255,255,255,0.6);
+  border: 2px dashed #f57c00;
+  border-radius: 10px;
+  padding: 6px 8px;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+}
+
 /* Stats box on welcome screen */
 #stats-box {
   width: 100%;
@@ -675,6 +697,13 @@ function emojiGrid(emoji, count) {
   return `<div class="emoji-grid">${Array(count).fill(emoji).join(' ')}</div>`;
 }
 
+function multiGroupHTML(groups, perGroup, emoji) {
+  const groupDivs = Array(groups).fill(null).map(() =>
+    `<div class="emoji-group">${Array(perGroup).fill(emoji).join(' ')}</div>`
+  ).join('');
+  return `<div class="multi-group-wrap">${groupDivs}</div>`;
+}
+
 function rulerSVG(len) {
   const L=22, R=252, Y=60, uw=(R-L)/10;
   let ticks='', labels='';
@@ -882,7 +911,8 @@ function renderVisual(visual) {
     case 'clock':   return clockSVG(+p[1], +p[2]===30);
     case 'fracCircle': return fracCircleSVG(+p[1], +p[2]);
     case 'fracBar':    return fracBarSVG(+p[1], +p[2]);
-    case 'emoji':   return emojiGrid(p[1], +p[2]);
+    case 'emoji':      return emojiGrid(p[1], +p[2]);
+    case 'multgroup':  return multiGroupHTML(+p[1], +p[2], p[3]);
     case 'ruler':   return rulerSVG(+p[1]);
     case 'coins':  return coinsSVG(p[1].split(',').map(Number));
     case 'array':      return arraySVG(+p[1], +p[2]);
@@ -927,6 +957,20 @@ function genDomino(maxN) {
   return buildQ('How many dots in total?', `domino:${a}:${b}`, c, numDistractors(c,3,2,12), 'dots');
 }
 const EMOJIS = ['🍎','🐶','🌟','🎈','🦋','🍭','🐱','🌸','🍕','🐸','🍓','⚽','🦄','🌈'];
+const MULTGROUP_EMOJI = { 2: '🍎', 3: '🐝' };
+function genMultGroup(maxFactor) {
+  const perGroup = pick([2, 3]);
+  const groups = rnd(2, maxFactor);
+  const total = groups * perGroup;
+  const emoji = MULTGROUP_EMOJI[perGroup];
+  const q = pick([
+    `How many ${emoji} are there in all?`,
+    `${groups} groups of ${perGroup}.\nHow many in all?`,
+    `${groups} × ${perGroup} = ?`,
+  ]);
+  return buildQ(q, `multgroup:${groups}:${perGroup}:${emoji}`, total,
+    numDistractors(total, 3, 2, maxFactor * 3 + 4), 'mult-group');
+}
 function genEmoji(maxN) {
   const e=pick(EMOJIS), n=rnd(2,maxN);
   return buildQ(`How many ${e} are there?`, `emoji:${e}:${n}`, n, numDistractors(n,3,1,maxN+3), 'emoji-count');
@@ -1167,9 +1211,9 @@ const LEVELS = {
   2: [()=>genAdd(10), ()=>genSub(10), ()=>genDomino(5),()=>genEmoji(5),  ()=>genCompare(9),  ()=>genMoney(2), ()=>genTenFrame(9,10), ()=>genNumberBond(8),  ()=>genMakeTen(5),  ()=>genTeenNumber(), ()=>genShapeAttribute(), ()=>genWord(10), ()=>genTwoDice(), ()=>genCardPattern()],
   3: [()=>genAdd(15), ()=>genSub(15), ()=>genShape(),  ()=>genEmoji(8),  ()=>genCompare(20), ()=>genMoney(3), ()=>genTenFrame(9,10), ()=>genNumberBond(10), ()=>genMakeTen(10), ()=>genTeenNumber(), ()=>genShapeAttribute(), ()=>genWord(15), ()=>genTwoDice(), ()=>genCardPattern()],
   4: [()=>genAdd(20), ()=>genSub(20), ()=>genSkip(5),  ()=>genPlace2(),   ()=>genMoney(4), ()=>genNumberBond(10), ()=>genMakeTen(10), ()=>genTeenNumber(), ()=>genWord(20), ()=>genCardPattern()],
-  5: [()=>genWord(20),()=>genClock(false),()=>genFrac(2),()=>genFrac(4),()=>genSkip(5),   ()=>genPlace2(),   ()=>genMoney(5),  ()=>genArray(3),  ()=>genDivision(3)],
-  6: [()=>genClock(true),()=>genRuler(),  ()=>genFrac(4),()=>genFrac(2),()=>genWord(20),  ()=>genPlace2(),   ()=>genSkip(10),  ()=>genArray(4),  ()=>genDivision(4)],
-  7: [()=>genAdd(100),()=>genSub(100),()=>genPlace3(), ()=>genFrac(3), ()=>genEmoji(12),  ()=>genArray(5),  ()=>genDivision(5)],
+  5: [()=>genWord(20),()=>genClock(false),()=>genFrac(2),()=>genFrac(4),()=>genSkip(5),   ()=>genPlace2(),   ()=>genMoney(5),  ()=>genArray(3),  ()=>genDivision(3), ()=>genMultGroup(3)],
+  6: [()=>genClock(true),()=>genRuler(),  ()=>genFrac(4),()=>genFrac(2),()=>genWord(20),  ()=>genPlace2(),   ()=>genSkip(10),  ()=>genArray(4),  ()=>genDivision(4), ()=>genMultGroup(4)],
+  7: [()=>genAdd(100),()=>genSub(100),()=>genPlace3(), ()=>genFrac(3), ()=>genEmoji(12),  ()=>genArray(5),  ()=>genDivision(5), ()=>genMultGroup(5)],
   8: [()=>genWord(100),()=>genPattern(8),()=>genGraph(),()=>genRuler(),()=>genPlace3(),   ()=>genAdd(100),   ()=>genArray(5),  ()=>genDivision(5)],
   9: [()=>genAdd(100),()=>genSub(100),()=>genWord(100),()=>genFrac(4),()=>genPlace3(),   ()=>genGraph(),    ()=>genPattern(10),()=>genArray(6),  ()=>genDivision(6)],
 };
@@ -1200,6 +1244,7 @@ const TOPIC_GENS = {
   'card-pattern':  {1:()=>genCardPattern(),2:()=>genCardPattern(),3:()=>genCardPattern(),4:()=>genCardPattern(),5:()=>genCardPattern(),6:()=>genCardPattern(),7:()=>genCardPattern(),8:()=>genCardPattern(),9:()=>genCardPattern()},
   'dice-add':      {1:()=>genTwoDice(),2:()=>genTwoDice(),3:()=>genTwoDice(),4:()=>genTwoDice(),5:()=>genTwoDice(),6:()=>genTwoDice(),7:()=>genTwoDice(),8:()=>genTwoDice(),9:()=>genTwoDice()},
   'division':      {1:()=>genDivision(2),2:()=>genDivision(2),3:()=>genDivision(3),4:()=>genDivision(3),5:()=>genDivision(3),6:()=>genDivision(4),7:()=>genDivision(5),8:()=>genDivision(5),9:()=>genDivision(6)},
+  'mult-group':    {1:()=>genMultGroup(3),2:()=>genMultGroup(3),3:()=>genMultGroup(3),4:()=>genMultGroup(4),5:()=>genMultGroup(4),6:()=>genMultGroup(5),7:()=>genMultGroup(5),8:()=>genMultGroup(5),9:()=>genMultGroup(6)},
 };
 
 function pickQuestion() {
@@ -1256,7 +1301,7 @@ const TOPIC_LABELS = {
   'shape':'Shapes','skip-count':'Skip Count','place-value':'Place Value',
   'word-problem':'Word Problems','clock':'Telling Time','fraction':'Fractions',
   'measurement':'Measurement','bargraph':'Bar Graphs','pattern':'Patterns',
-  'money':'Money','array':'Arrays',
+  'money':'Money','array':'Arrays','mult-group':'Equal Groups',
   'ten-frame':'Ten Frames','number-bond':'Number Bonds','make-ten':'Making 10',
   'teen-number':'Teen Numbers','shape-attribute':'Shape Properties',  'dice-add':'Dice Addition','card-pattern':'Card Patterns',
 };
